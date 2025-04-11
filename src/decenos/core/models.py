@@ -24,5 +24,15 @@ class Process(models.Model):
 
     process_type = models.CharField(max_length=20, choices=ProcessType.choices, default=ProcessType.DEFAULT)
 
+    page_table = models.JSONField(default=list) 
+
+    def allocate_pages(self, num_pages):
+        self.page_table = list(range(num_pages))  
+        self.save()
+
+    def free_pages(self):
+        self.page_table = []
+        self.save()
+
     def __str__(self):
-        return f"{self.name} ({self.get_state_display()})"
+        return f"Process {self.pid} - {self.name}"
