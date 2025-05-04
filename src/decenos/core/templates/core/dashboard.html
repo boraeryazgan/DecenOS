@@ -1,0 +1,406 @@
+{% extends 'core/base.html' %} {% block process_dashboard %}
+<div class="process-controls">
+  <button class="console-button" onclick="createProcess()">New Process</button>
+  <button class="console-button" onclick="refreshProcesses()">Refresh</button>
+</div>
+
+<div class="process-visualization">
+  <div class="process-list" id="process-list">
+    {% for process in processes %}
+    <div class="process-item" data-pid="{{ process.pid }}">
+      <div class="process-header">
+        <span class="process-name">{{ process.name }}</span>
+        <span class="process-type badge bg-secondary"
+          >{{ process.process_type }}</span
+        >
+      </div>
+      <div class="process-details">
+        <div>PID: {{ process.pid }}</div>
+        <div>Owner: {{ process.owner.username }}</div>
+        <div>State: <span class="process-state">{{ process.state }}</span></div>
+        <div>Memory: {{ process.memory_required }}MB</div>
+      </div>
+      <div class="process-actions">
+        <button
+          class="console-button"
+          onclick="terminateProcess({{ process.pid }})"
+        >
+          Terminate
+        </button>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+  function createProcess() {
+    const modal = new bootstrap.Modal(
+      document.getElementById("createProcessModal")
+    );
+    modal.show();
+  }
+
+  function submitProcess() {
+    const name = document.getElementById("processName").value;
+    const processType = document.getElementById("processType").value;
+    const memoryRequired = document.getElementById("memoryRequired").value;
+
+    fetch("/process/api/process/create/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCSRFToken(),
+      },
+      body: JSON.stringify({
+        name: name,
+        process_type: processType,
+        memory_required: memoryRequired,
+      }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          return response.json().then((data) => {
+            throw new Error(data.message || "Failed to create process");
+          });
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data.success) {
+          bootstrap.Modal.getInstance(
+            document.getElementById("createProcessModal")
+          ).hide();
+          refreshProcesses();
+          alert(data.message || "Process created successfully");
+        } else {
+          throw new Error(data.message || "Failed to create process");
+        }
+      })
+      .catch((error) => {
+        console.error("Error creating process:", error);
+        alert(error.message || "Failed to create process. Please try again.");
+      });
+  }
+
+  function terminateProcess(pid) {
+    fetch(`/process/api/process/${pid}/terminate/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCSRFToken(),
+      },
+    })
+      .then((response) => {
+        if (!response.ok) {
+          return response.json().then((data) => {
+            throw new Error(data.message || "Failed to terminate process");
+          });
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data.success) {
+          document.querySelector(`[data-pid="${pid}"]`).remove();
+          alert(data.message || "Process terminated successfully");
+        } else {
+          throw new Error(data.message || "Failed to terminate process");
+        }
+      })
+      .catch((error) => {
+        console.error("Error terminating process:", error);
+        alert(
+          error.message || "Failed to terminate process. Please try again."
+        );
+      });
+  }
+
+  function refreshProcesses() {
+    fetch("/process/api/processes/")
+      .then((response) => response.json())
+      .then((data) => {
+        const processList = document.getElementById("process-list");
+        processList.innerHTML = data.processes
+          .map(
+            (process) => `
+                <div class="process-item" data-pid="${process.pid}">
+                    <div class="process-header">
+                        <span class="process-name">${process.name}</span>
+                        <span class="process-type badge bg-secondary">${process.process_type}</span>
+                    </div>
+                    <div class="process-details">
+                        <div>PID: ${process.pid}</div>
+                        <div>Owner: ${process.owner.username}</div>
+                        <div>State: <span class="process-state">${process.state}</span></div>
+                        <div>Memory: ${process.memory_required}MB</div>
+                    </div>
+                    <div class="process-actions">
+                        <button class="console-button" onclick="terminateProcess(${process.pid})">Terminate</button>
+                    </div>
+                </div>
+            `
+          )
+          .join("");
+      });
+  }
+
+  // Auto-refresh system status
+  function refreshSystemStatus() {
+    fetch("/process/api/system/status/")
+      .then((response) => response.json())
+      .then((data) => {
+        // Update memory usage
+        const memoryBar = document.querySelector(
+          ".metric:nth-child(1) .progress-bar"
+        );
+        memoryBar.style.width = `${data.memory_usage}%`;
+        memoryBar.textContent = `${data.memory_usage}%`;
+
+        // Update process count
+        document.querySelector(
+          ".metric:nth-child(2) .metric-value"
+        ).textContent = data.process_count;
+
+        // Update ready queue size
+        document.querySelector(
+          ".metric:nth-child(3) .metric-value"
+        ).textContent = data.ready_queue_size;
+
+        // Update current process
+        document.querySelector(
+          ".metric:nth-child(4) .metric-value"
+        ).textContent = data.current_process || "None";
+
+        // Update file system status
+        const fileSystemStatus = document.querySelector(
+          ".metric:nth-child(5) .metric-value"
+        );
+        fileSystemStatus.innerHTML = `
+          Files: ${data.file_system_status.total_files}<br>
+          Directories: ${data.file_system_status.total_directories}
+        `;
+      });
+  }
+
+  // Refresh system status every 5 seconds
+  setInterval(refreshSystemStatus, 5000);
+</script>
+{% endblock %} {% block system_status %}
+<div class="system-metrics">
+  <div class="metric">
+    <h4>Memory Usage</h4>
+    <div class="progress">
+      <div
+        class="progress-bar bg-success"
+        role="progressbar"
+        style="width: {{ memory_usage }}%"
+      >
+        {{ memory_usage }}%
+      </div>
+    </div>
+  </div>
+  <div class="metric">
+    <h4>Process Count</h4>
+    <div class="metric-value">{{ process_count }}</div>
+  </div>
+  <div class="metric">
+    <h4>Ready Queue</h4>
+    <div class="metric-value">{{ ready_queue_size }}</div>
+  </div>
+  <div class="metric">
+    <h4>Current Process</h4>
+    <div class="metric-value">{{ current_process|default:"None" }}</div>
+  </div>
+  <div class="metric">
+    <h4>File System</h4>
+    <div class="metric-value">
+      Files: {{ file_system_status.total_files }}<br />
+      Directories: {{ file_system_status.total_directories }}
+    </div>
+  </div>
+</div>
+{% endblock %} {% block file_explorer %}
+<div class="file-navigation">
+  <div class="breadcrumb">
+    {% for dir in current_path %}
+    <span class="breadcrumb-item">{{ dir.name }}</span>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="file-list">
+  {% for dir in directories %}
+  <div class="file-item directory" onclick="navigateTo('{{ dir.id }}')">
+    📁 {{ dir.name }}
+  </div>
+  {% endfor %} {% for file in files %}
+  <div class="file-item" onclick="openFile('{{ file.id }}')">
+    📄 {{ file.name }}
+    <span class="file-size">{{ file.size }} bytes</span>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="file-actions">
+  <button class="console-button" onclick="createFile()">New File</button>
+  <button class="console-button" onclick="createDirectory()">
+    New Directory
+  </button>
+</div>
+
+<script>
+  function navigateTo(directoryId) {
+    window.location.href = `/process/explorer/${directoryId}/`;
+  }
+
+  function openFile(fileId) {
+    fetch(`/process/api/file/${fileId}/`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Failed to fetch file content");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log("File data received:", data); // Debug log
+
+        // Get the modal elements
+        const fileNameElement = document
+          .getElementById("fileViewerModal")
+          .querySelector("#fileName");
+        const fileSizeElement = document
+          .getElementById("fileViewerModal")
+          .querySelector("#fileSize");
+        const fileEncryptedElement = document
+          .getElementById("fileViewerModal")
+          .querySelector("#fileEncrypted");
+        const fileContentElement = document
+          .getElementById("fileViewerModal")
+          .querySelector("#fileContent");
+
+        // Update the modal content
+        fileNameElement.textContent = data.name || "Unnamed File";
+        fileSizeElement.textContent = data.size || 0;
+        fileEncryptedElement.textContent = data.is_encrypted ? "Yes" : "No";
+        fileContentElement.textContent = data.content || "No content available";
+
+        // Show the modal
+        const modal = new bootstrap.Modal(
+          document.getElementById("fileViewerModal")
+        );
+        modal.show();
+      })
+      .catch((error) => {
+        console.error("Error opening file:", error);
+        alert("Failed to open file. Please try again.");
+      });
+  }
+
+  function createFile() {
+    const modal = new bootstrap.Modal(
+      document.getElementById("createFileModal")
+    );
+    modal.show();
+  }
+
+  function submitFile() {
+    const name = document.getElementById("fileName").value;
+    const content = document.getElementById("fileContent").value;
+    const isEncrypted = document.getElementById("isEncrypted").checked;
+    const currentDirId = "{{ current_dir.id }}" || null;
+
+    fetch("/process/api/file/create/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCSRFToken(),
+      },
+      body: JSON.stringify({
+        name: name,
+        content: content,
+        is_encrypted: isEncrypted,
+        directory_id: currentDirId,
+      }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          return response.json().then((data) => {
+            throw new Error(data.message || "Failed to create file");
+          });
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data.success) {
+          bootstrap.Modal.getInstance(
+            document.getElementById("createFileModal")
+          ).hide();
+          window.location.reload();
+          alert(data.message || "File created successfully");
+        } else {
+          throw new Error(data.message || "Failed to create file");
+        }
+      })
+      .catch((error) => {
+        console.error("Error creating file:", error);
+        alert(error.message || "Failed to create file. Please try again.");
+      });
+  }
+
+  function createDirectory() {
+    const modal = new bootstrap.Modal(
+      document.getElementById("createDirectoryModal")
+    );
+    modal.show();
+  }
+
+  function submitDirectory() {
+    const name = document.getElementById("directoryName").value;
+
+    fetch("/process/api/directory/create/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": getCSRFToken(),
+      },
+      body: JSON.stringify({
+        name: name,
+        parent_id: "{{ current_dir.id }}" || null,
+      }),
+    })
+      .then((response) => {
+        if (!response.ok) {
+          return response.json().then((data) => {
+            throw new Error(data.message || "Failed to create directory");
+          });
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data.success) {
+          bootstrap.Modal.getInstance(
+            document.getElementById("createDirectoryModal")
+          ).hide();
+          window.location.reload();
+          alert(data.message || "Directory created successfully");
+        } else {
+          throw new Error(data.message || "Failed to create directory");
+        }
+      })
+      .catch((error) => {
+        console.error("Error creating directory:", error);
+        alert(error.message || "Failed to create directory. Please try again.");
+      });
+  }
+</script>
+{% endblock %} {% block console_output %}
+<div class="console-history" id="console-history">
+  {% for entry in console_history %}
+  <div class="console-entry">
+    <span class="prompt">$</span>
+    <span class="command">{{ entry.command }}</span>
+    <div class="output">{{ entry.output }}</div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}
