@@ -24,19 +24,38 @@ class FileSystemManager:
             )
             return directory
 
-    def create_file(self, name, directory, owner, content="", is_encrypted=False):
+    def create_file(self, name, content='', directory=None, owner=None, is_encrypted=False):
         """Create a new file"""
-        with self.lock:
+        try:
+            # If no directory is provided, use root directory
+            if directory is None:
+                # Get the root directory (parent=None)
+                root_directory = Directory.objects.filter(parent=None).first()
+                if root_directory is None:
+                    # Create root directory if it doesn't exist
+                    root_directory = Directory.objects.create(
+                        name="root",
+                        parent=None,
+                        owner=owner
+                    )
+                directory = root_directory
+            
+            # Create the file
             file = File.objects.create(
                 name=name,
+                content=content,
                 directory=directory,
                 owner=owner,
-                content=content,
                 size=len(content),
-                is_encrypted=is_encrypted
+                is_encrypted=is_encrypted,
+                permissions={}  # Default empty permissions
             )
+            
             self.file_locks[file.id] = threading.Lock()
             return file
+        except Exception as e:
+            print(f"Error creating file: {str(e)}")
+            return None
 
     def read_file(self, file_id, user):
         """Read file content with permission check"""

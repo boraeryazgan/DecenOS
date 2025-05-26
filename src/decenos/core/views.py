@@ -8,11 +8,17 @@ import json
 from django.contrib.auth.decorators import login_required
 from .os import DecenOS
 
-# Initialize the OS instance
-os_instance = DecenOS()
-
 # Create your views here.
 QUANTUM = 1  
+
+# Initialize OS instance lazily
+_os_instance = None
+
+def get_os_instance():
+    global _os_instance
+    if _os_instance is None:
+        _os_instance = DecenOS()
+    return _os_instance
 
 @csrf_exempt
 def create_process(request):
@@ -143,7 +149,7 @@ def dashboard(request):
     files = File.objects.filter(directory=None)
     
     # Get system metrics
-    system_status = os_instance.get_system_status()
+    system_status = get_os_instance().get_system_status()
     
     return render(request, 'core/dashboard.html', {
         'processes': processes,
@@ -177,7 +183,7 @@ def file_explorer(request, directory_id=None):
         current_path = []
     
     # Get system status
-    system_status = os_instance.get_system_status()
+    system_status = get_os_instance().get_system_status()
     
     return render(request, 'core/dashboard.html', {
         'processes': Process.objects.all(),
@@ -224,7 +230,7 @@ def api_process_terminate(request, pid):
         process.update_state(Process.ProcessState.TERMINATED)
         
         # Then try to terminate through the OS instance
-        success = os_instance.terminate_process(pid)
+        success = get_os_instance().terminate_process(pid)
         if success:
             return JsonResponse({
                 'success': True,
@@ -255,7 +261,7 @@ def api_process_create(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            process = os_instance.create_process(
+            process = get_os_instance().create_process(
                 name=data['name'],
                 owner=request.user,
                 memory_required=int(data.get('memory_required', 0)),
@@ -329,17 +335,17 @@ def api_file_create(request):
             data = json.loads(request.body)
             directory_id = data.get('directory_id')
             
-            # If no directory_id is provided, use the root directory
-            if not directory_id:
-                directory = Directory.objects.filter(parent=None).first()
-                if not directory:
-                    # Create a root directory if it doesn't exist
-                    directory = Directory.objects.create(
-                        name="root",
-                        parent=None,
-                        owner=request.user
-                    )
-            else:
+            # Get or create root directory
+            root_directory = Directory.objects.filter(parent=None).first()
+            if not root_directory:
+                root_directory = Directory.objects.create(
+                    name="root",
+                    parent=None,
+                    owner=request.user
+                )
+            
+            # If directory_id is provided, use that directory instead of root
+            if directory_id:
                 try:
                     directory = Directory.objects.get(id=directory_id)
                 except Directory.DoesNotExist:
@@ -347,8 +353,12 @@ def api_file_create(request):
                         'success': False,
                         'message': 'Directory not found'
                     }, status=404)
+            else:
+                # Explicitly use root directory
+                directory = root_directory
             
-            file = os_instance.file_system.create_file(
+            # Create the file
+            file = get_os_instance().file_system.create_file(
                 name=data['name'],
                 content=data.get('content', ''),
                 directory=directory,
@@ -360,7 +370,9 @@ def api_file_create(request):
                 return JsonResponse({
                     'success': True,
                     'file_id': file.id,
-                    'message': f'File {file.name} created successfully'
+                    'name': file.name,
+                    'directory': file.directory.name,
+                    'message': f'File {file.name} created successfully in {file.directory.name}'
                 })
             return JsonResponse({
                 'success': False,
@@ -392,7 +404,7 @@ def api_directory_create(request):
     if request.method == 'POST':
         data = json.loads(request.body)
         parent = Directory.objects.get(id=data['parent_id']) if data.get('parent_id') else None
-        directory = os_instance.file_system.create_directory(
+        directory = get_os_instance().file_system.create_directory(
             name=data['name'],
             parent=parent,
             owner=request.user
@@ -406,7 +418,7 @@ def api_directory_create(request):
 @login_required
 def api_system_status(request):
     """Get current system status"""
-    status = os_instance.get_system_status()
+    status = get_os_instance().get_system_status()
     return JsonResponse({
         'memory_usage': status['memory_usage'],
         'process_count': status['process_count'],

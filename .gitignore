@@ -10,8 +10,7 @@ venv/
 *.log
 *.pot
 *.pyc
-db.sqlite3
-*.sqlite3
+
 
 # VS Code
 .vscode/
