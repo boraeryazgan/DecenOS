@@ -30,34 +30,7 @@ DecenOS is an innovative educational simulation platform designed to demonstrate
 
 ### Installation
 
-1. Clone the repository:
 
-   ```bash
-   git clone https://github.com/yourusername/DecenOS.git
-   cd DecenOS
-   ```
-
-2. Install dependencies:
-
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. Run migrations:
-
-   ```bash
-   python manage.py migrate
-   ```
-
-4. Start the development server:
-
-   ```bash
-   python manage.py runserver
-   ```
-
-5. Open your browser and navigate to `http://localhost:8000`.
-
-## Usage
 
 ### Process Management
 
