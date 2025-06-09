@@ -20,6 +20,7 @@ class Process(models.Model):
     last_run_time = models.DateTimeField(null=True, blank=True)
     quantum = models.IntegerField(default=100)  # Time quantum in milliseconds
     priority = models.IntegerField(default=0)  # For Round Robin, all processes have equal priority
+    
 
     class ProcessType(models.TextChoices):
         DEFAULT = 'DEFAULT'
@@ -30,6 +31,11 @@ class Process(models.Model):
     process_type = models.CharField(max_length=20, choices=ProcessType.choices, default=ProcessType.DEFAULT)
 
     page_table = models.JSONField(default=list) 
+
+    happiness = models.IntegerField(default=100)  
+    hunger = models.IntegerField(default=0)      
+    alive = models.BooleanField(default=True)
+
 
     def allocate_pages(self, num_pages):
         self.page_table = list(range(num_pages))  

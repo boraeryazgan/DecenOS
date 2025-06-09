@@ -23,4 +23,5 @@ urlpatterns = [
     path('free_memory/<int:pid>/', views.free_memory, name='free_memory'),
     path('start_concurrency/', views.start_concurrency, name='start_concurrency'),
     path('stop_concurrency/', views.stop_concurrency, name='stop_concurrency'),
+    path('api/processes/status/', views.process_status, name='process_status'),
 ]

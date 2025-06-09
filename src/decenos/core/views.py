@@ -1,12 +1,15 @@
 from django.shortcuts import render
+from .scheduler import update_tamagotchi
 import time
 import threading
 from django.http import JsonResponse
+
 from .models import Process, File, Directory
 from django.views.decorators.csrf import csrf_exempt
 import json
 from django.contrib.auth.decorators import login_required
 from .os import DecenOS
+
 
 # Create your views here.
 QUANTUM = 1  
@@ -144,6 +147,8 @@ def stop_concurrency(request):
 @login_required
 def dashboard(request):
     """Render the main dashboard"""
+    update_tamagotchi()
+
     processes = Process.objects.exclude(state=Process.ProcessState.TERMINATED)
     directories = Directory.objects.filter(parent=None)
     files = File.objects.filter(directory=None)
@@ -163,6 +168,14 @@ def dashboard(request):
         'file_system_status': system_status['file_system_status'],
         'console_history': []
     })
+
+@login_required
+def process_status(request):
+    """Return JSON Tamagotchi status for all processes"""
+    data = list(
+        Process.objects.values('pid', 'happiness', 'hunger', 'alive')
+    )
+    return JsonResponse(data, safe=False)
 
 @login_required
 def file_explorer(request, directory_id=None):

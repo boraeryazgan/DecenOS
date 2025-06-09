@@ -103,5 +103,19 @@
     <div class="output">{{ entry.output }}</div>
   </div>
   {% endfor %}
+  <h4>Process Tamagotchi</h4>
+  {% for process in processes %}
+
+<div class="process-item" data-pid="{{ process.pid }}">
+
+  <div class="tamagotchi-status">
+    <div>😊 Happiness: {{ process.happiness }}%</div>
+    <div>🍖 Hunger: {{ process.hunger }}%</div>
+    {% if not process.alive %}
+      <div class="badge bg-danger">💀 Dead</div>
+    {% endif %}
+  </div>
+</div>
+{% endfor %}
 </div>
 {% endblock %}

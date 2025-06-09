@@ -164,3 +164,23 @@ function refreshSystemStatus() {
 
 // Refresh system status every 5 seconds
 setInterval(refreshSystemStatus, 5000);
+
+
+
+async function fetchTamagotchi() {
+  const res = await fetch('/api/processes/status/');
+  const data = await res.json();
+  data.forEach(p => {
+    const el = document.querySelector(`[data-pid="${p.pid}"] .tamagotchi-status`);
+    if (el) {
+      el.innerHTML = `
+        <div>😊 Happiness: ${p.happiness}%</div>
+        <div>🍖 Hunger: ${p.hunger}%</div>
+        ${!p.alive ? '<div class="badge bg-danger">💀 Dead</div>' : ''}
+      `;
+    }
+  });
+}
+
+fetchTamagotchi();
+setInterval(fetchTamagotchi, 10000);
