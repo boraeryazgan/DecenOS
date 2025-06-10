@@ -25,4 +25,5 @@ urlpatterns = [
     path('stop_concurrency/', views.stop_concurrency, name='stop_concurrency'),
     path('simulate/concurrency/', views.start_concurrency_simulation, name='start_concurrency_simulation'),
     path('simulate/concurrency/logs/', views.get_concurrency_logs, name='get_concurrency_logs'),
+    path('api/processes/status/', views.process_status, name='process_status'),
 ]

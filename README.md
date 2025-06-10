@@ -10,6 +10,7 @@ DecenOS is an innovative educational simulation platform designed to demonstrate
 - **Memory Management:** Simulate virtual memory through paging mechanisms, supporting dynamic memory allocation and memory protection.
 - **Concurrency & Synchronization:** Demonstrate concurrent programming principles through multi-threading, locks, condition variables, and producer-consumer patterns.
 - **File System Implementation:** Implement a hierarchical file system with directory structure, file operations (create, read, write, delete), and security features (permissions, encryption).
+- **Process Tamagotchi:** Each process is represented as a virtual “pet” that requires CPU time (feeding) and memory allocation. If neglected, the pet’s hunger increases and happiness decreases—eventually “dying” if not managed. This gamified mechanic reinforces resource scheduling and management concepts.
 - **Bonus Features:** Themed process types (HACKER, MINER, VALIDATOR), real-time system monitoring, and interactive process management.
 
 ## Technology Stack
