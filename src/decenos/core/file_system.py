@@ -170,3 +170,4 @@ class FileSystemManager:
                 'files': list(directory.files.all()),
                 'subdirectories': list(directory.subdirectories.all())
             } 
+        

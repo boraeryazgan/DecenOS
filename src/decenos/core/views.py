@@ -7,6 +7,10 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from django.contrib.auth.decorators import login_required
 from .os import DecenOS
+from django.http import JsonResponse
+from .concurrency import run_producer_consumer
+import threading
+
 
 # Create your views here.
 QUANTUM = 1  
@@ -426,3 +430,15 @@ def api_system_status(request):
         'current_process': status['current_process'],
         'file_system_status': status['file_system_status']
     })
+
+
+
+
+def start_concurrency_simulation(request):
+    t = threading.Thread(target=run_producer_consumer)
+    t.start()
+    return JsonResponse({'status': 'Simulation started'})
+
+def get_concurrency_logs(request):
+    from .concurrency import get_logs
+    return JsonResponse({'logs': get_logs()})

@@ -104,4 +104,34 @@
   </div>
   {% endfor %}
 </div>
+<hr>
+<h3>Concurrency & Synchronization</h3>
+<button onclick="startSimulation()">Simülasyonu Başlat</button>
+
+<script>
+  function startSimulation() {
+    fetch("/process/simulate/concurrency/")
+      .then(response => response.json())
+      .then(data => alert(data.status))
+      .catch(error => alert("Hata oluştu: " + error));
+  }
+</script>
+
+<h4>Canlı Log</h4>
+
+<pre id="logDisplay" style="background-color:#000; padding:10px; height:200px; overflow-y:scroll;"></pre>
+
+<script>
+  function fetchLogs() {
+    fetch("/process/simulate/concurrency/logs/")
+      .then(response => response.json())
+      .then(data => {
+        const logArea = document.getElementById("logDisplay");
+        logArea.innerHTML = data.logs.join("<br>");
+        logArea.scrollTop = logArea.scrollHeight;
+      });
+  }
+
+  setInterval(fetchLogs, 1000);  // Her saniye logları getir
+</script>
 {% endblock %}
